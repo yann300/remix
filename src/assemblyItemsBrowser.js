@@ -18,9 +18,9 @@ module.exports = React.createClass({
 			currentMemory: null,
 			currentCallData: null,
 			currentStepInfo: null,
-			codes: {}, // assembly items instructions list by contract addesses
 			instructionsIndexByBytesOffset: {}, // mapping between bytes offset and instructions index.
-			callStack: {}
+			callStack: {},
+			currentCode: null
 		};
 	},
 
@@ -42,6 +42,7 @@ module.exports = React.createClass({
 				<button onClick={this.stepOverBack} disabled={ this.checkButtonState(-1) } >Step Over Back</button>
 				<button onClick={this.stepOverForward} disabled={ this.checkButtonState(1) } >Step Over Forward</button>
 				<button onClick={this.stepIntoForward} disabled={ this.checkButtonState(1) } >Step Into Forward</button>
+				<button onClick={this.jumpNextContext} >Jump Next Context</button>
 			</div>
 
 			<div style={style.container}>
@@ -108,15 +109,20 @@ module.exports = React.createClass({
 		return ret
 	},
 
-	resolveAddress: function(address)
+	resolveCode: function(code)
 	{
-		if (!this.state.codes[address])
+		return codeUtils.nameOpCodes(new Buffer(code.substring(2), 'hex'))
+	},
+	
+	jumpNextContext: function()
+	{
+		var i = this.state.currentSelected
+		while (++i < this.props.vmTrace.length)
 		{
-			var hexCode = web3.eth.getCode(address)	
-			var code = codeUtils.nameOpCodes(new Buffer(hexCode.substring(2), 'hex'))
-			this.state.codes[address] = code[0]
-			this.state.instructionsIndexByBytesOffset[address] = code[1]
+			if (this.isCallInstruction(i))
+				break
 		}
+		this.selectState(i);
 	},
 
 	checkButtonState: function(incr)
@@ -133,7 +139,7 @@ module.exports = React.createClass({
 	{
 		if (this.props.vmTrace)
 		{
-			return this.state.codes[this.state.currentAddress].map(function(item, i) 
+			return this.state.currentCode.map(function(item, i)
 			{
 				return <option key={i} value={i} >{item}</option>;
 			});	
@@ -141,7 +147,7 @@ module.exports = React.createClass({
 	},
 
 	componentWillReceiveProps: function (nextProps) 
-	{ 
+	{
 		if (!nextProps.vmTrace)
 			return
 		this.buildCallStack(nextProps.vmTrace)
@@ -154,7 +160,7 @@ module.exports = React.createClass({
 			return
 		var callStack = []
 		var depth = -1
-		for (var k = 1; k < vmTrace.length; k++)
+		for (var k = 0; k < vmTrace.length; k++)
 		{
 			var trace = vmTrace[k]
 			if (trace.depth === undefined || trace.depth === depth)
@@ -179,9 +185,18 @@ module.exports = React.createClass({
 		if (!currentAddress)
 			currentAddress = props.vmTrace[vmTraceIndex].address
 		if (props.vmTrace[vmTraceIndex].address && props.vmTrace[vmTraceIndex].address !== this.state.currentAddress)
-		{
-			this.resolveAddress(props.vmTrace[vmTraceIndex].address)
 			stateChanges["currentAddress"] = props.vmTrace[vmTraceIndex].address
+		
+		var	instructionsIndexByBytesOffset = this.state.currentInstructionsIndexByBytesOffset
+		var codeIndex = vmTraceIndex
+		if (vmTraceIndex < previousState)
+			codeIndex = this.retrieveLastSeenProperty(vmTraceIndex, "depth", props.vmTrace)
+		if (props.vmTrace[codeIndex].code && props.vmTrace[codeIndex].code !== this.state.currentCode)
+		{
+			var code = this.resolveCode(props.vmTrace[codeIndex].code)
+			stateChanges["currentCode"] = code[0]
+			stateChanges["currentInstructionsIndexByBytesOffset"] = code[1]
+			instructionsIndexByBytesOffset = code[1]
 		}
 
 		if (props.vmTrace[vmTraceIndex].stack)
@@ -215,7 +230,7 @@ module.exports = React.createClass({
 		if (props.vmTrace[vmTraceIndex].calldata || callDataIndex === 0)
 			stateChanges["currentCallData"] = [props.vmTrace[callDataIndex].calldata]
 
-		stateChanges["selectedInst"] = this.state.instructionsIndexByBytesOffset[currentAddress][props.vmTrace[vmTraceIndex].pc]
+		stateChanges["selectedInst"] = instructionsIndexByBytesOffset[props.vmTrace[vmTraceIndex].pc]
 		stateChanges["currentSelected"] = vmTraceIndex
 
 		stateChanges["currentStepInfo"] = [
@@ -223,8 +238,7 @@ module.exports = React.createClass({
 			"Adding Memory: " + (props.vmTrace[vmTraceIndex].memexpand ? props.vmTrace[vmTraceIndex].memexpand : ""),
 			"Step Cost: " + props.vmTrace[vmTraceIndex].gascost,
 			"Remaining Gas: " + props.vmTrace[vmTraceIndex].gas
-		]
-
+		]		
 		this.setState(stateChanges)
 	},
 
@@ -264,22 +278,6 @@ module.exports = React.createClass({
 	stepIntoForward: function()
 	{
 		this.moveSelection(1)
-	},
-
-	stepOverBack: function()
-	{
-		if (this.isReturnInstruction(this.state.currentSelected - 1))
-			this.stepOutBack();
-		else
-			this.moveSelection(-1);
-	},
-
-	stepOverForward: function()
-	{
-		if (this.isCallInstruction(this.state.currentSelected))
-			this.stepOutForward();
-		else
-			this.moveSelection(1);
 	},
 
 	isCallInstruction: function(index)

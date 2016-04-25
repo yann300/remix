@@ -7,14 +7,21 @@ module.exports = React.createClass({
 	},
 
 	getInitialState: function() {
-		return {blockNumber: "1382256", txNumber: "1", from: "", to: "", hash: ""}
+		return {blockNumber: "1382256", blockHash: "", txNumber: "1", from: "", to: "", hash: ""}
 	},
 
 	submit: function()
 	{
+		console.log("request: " + this.state.blockNumber + " " + this.state.txNumber)
 		var tx = web3.eth.getTransactionFromBlock(this.state.blockNumber, this.state.txNumber)
-		this.setState({from: tx.from, to: tx.to, hash: tx.hash})
-		this.props.onNewTxRequested(this.state.blockNumber, parseInt(this.state.txNumber))
+		console.log(JSON.stringify(tx))
+		if (tx)
+		{
+			this.setState({from: tx.from, to: tx.to, hash: tx.hash, blockHash: tx.blockHash})
+			this.props.onNewTxRequested(this.state.blockNumber, parseInt(this.state.txNumber))
+		}
+		else
+			alert('transaction not found')
 	},
 	
 	updateBlockN: function(ev) {
@@ -28,11 +35,12 @@ module.exports = React.createClass({
 	render: function() {		
 		return (
 			<div style={style.container} >
-			<input onChange={this.updateBlockN} type="text" placeholder= {"Block number or hash (default 1382256)" + this.state.blockNumber}></input>
-			<input onChange={this.updateTxN} type="text" placeholder={"Transaction Number (default 1) " + this.state.txNumber}></input>
+			<input onChange={this.updateBlockN} type="text" placeholder= "(default 1382256)"></input>
+			<input onChange={this.updateTxN} type="text" placeholder="(default 1)"></input>
 			<button onClick={this.submit}>Get</button>
 			<div style={style.transactionInfo}>
-			<div>Hash: {this.state.hash}</div>
+			<div>Block Hash: {this.state.blockHash}</div>
+			<div>Tx Hash: {this.state.hash}</div>
 			<div>From: {this.state.from}</div>
 			<div>To: {this.state.to}</div>
 			</div>
