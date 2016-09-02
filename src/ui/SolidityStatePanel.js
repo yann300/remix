@@ -8,7 +8,7 @@ function SolidityStatePanel (_parent, _traceManager, _codeManager) {
   this.parent = _parent
   this.traceManager = _traceManager
   this.codeManager = _codeManager
-  this.basicPanel = new BasicPanel('Solidity State')
+  this.basicPanel = new BasicPanel('Contract Storage')
   this.init()
   this.disabled = false
   this.astList

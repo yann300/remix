@@ -18,7 +18,7 @@ function TraceManager () {
 }
 
 // init section
-TraceManager.prototype.resolveTrace = function (tx, callback) {
+TraceManager.prototype.resolveTrace = function (tx, astList, callback) {
   this.tx = tx
   this.init()
   if (!globalUtil.web3) callback('web3 not loaded', false)
@@ -32,7 +32,7 @@ TraceManager.prototype.resolveTrace = function (tx, callback) {
     } else {
       if (result.structLogs.length > 0) {
         self.trace = result.structLogs
-        self.traceAnalyser.analyse(result.structLogs, tx, function (error, result) {
+        self.traceAnalyser.analyse(result.structLogs, tx, astList, function (error, result) {
           if (error) {
             self.isLoading = false
             console.log(error)

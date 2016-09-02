@@ -1,6 +1,16 @@
 'use strict'
 
 module.exports = {
+  
+  getBasicType: function (variable) {
+    var ret = {}
+    ret.originalType = variable.attributes.type
+    ret.innerType = this.getInnerType(variable)
+    ret.size = this.getSize(variable, ret.innerType)
+    ret.memSize = isNaN(ret.size) ? ret.size : ret.size / 4
+    return ret
+  },
+  
   /**
    * return parse the type and return an object representing the type
    *

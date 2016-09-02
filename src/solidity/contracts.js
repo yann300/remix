@@ -104,10 +104,10 @@ module.exports = {
   getContractId: function (astList, contractName) {
     var id
     this.walkAstList(astList, { 'ContractDefinition': function (node) {
-      if (node.attributes && node.attributes.name === contractName) {
-        id = node.id
-      }
-      return true
+        if (node.attributes && node.attributes.name === contractName) {
+          id = node.id
+        }
+        return true
     }})
     return id
   },
@@ -143,6 +143,52 @@ module.exports = {
       return false
     }})
     return contracts
+  },
+
+  getNodeFromSourceLocation: function (location, ast) {
+    location = location.start + ':' + location.length + ':' + location.file
+    var nodeFound = null
+    var parentBlock = null
+    var self = this
+    this.walkAstList(ast, { 'Block': function (parent) {
+      self.walkAstList([{AST: parent}], function (localnode) {
+        if (localnode.src === location) {
+          nodeFound = localnode
+          parentBlock = parent
+          return false
+        }
+        return true
+      })
+      return nodeFound === null
+    }})
+
+    return {
+      node: nodeFound,
+      parent: parentBlock
+    }
+  },
+
+  getVariableDeclarationFromSourceLocation: function (location, ast) {
+    location = location.start + ':' + location.length + ':' + location.file
+    var nodeFound = null
+    var parentBlock = null
+    var self = this
+    this.walkAstList(ast, { 'Block': function (parent) {
+      self.walkAstList([{AST: parent}], {'VariableDeclaration': function (localnode) {
+        if (localnode.id && localnode.name && localnode.src === location) {
+          nodeFound = localnode
+          parentBlock = parent
+          return false
+        }
+        return true
+      }})
+      return nodeFound === null
+    }})
+
+    return {
+      node: nodeFound,
+      parent: parentBlock
+    }
   },
 
   /**

@@ -50,7 +50,7 @@ function Ethdebugger () {
     self.stepChanged(stepIndex)
   })
   this.vmDebugger = new VmDebugger(this, this.traceManager, this.codeManager)
-  this.solDebugger = new SolidityDebugger(this, this.traceManager, this.codeManager)
+  this.solDebugger = new SolidityDebugger(this, this.traceManager, this.codeManager, this.sourceLocationTracker)
   this.sticker = new Sticker(this, this.traceManager)
 }
 
@@ -78,6 +78,7 @@ Ethdebugger.prototype.switchProvider = function (type) {
 Ethdebugger.prototype.debug = function (tx, compilationData) {
   if (compilationData) {
     this.solDebugger.setCompilationResult(compilationData.data.sources, compilationData.data.contracts)
+    this.astList = compilationData.data.sources
   }
   if (tx instanceof Object) {
     this.txBrowser.load(tx.hash)
@@ -127,7 +128,7 @@ Ethdebugger.prototype.startDebugging = function (blockNumber, txIndex, tx) {
   console.log('loading trace...')
   this.tx = tx
   var self = this
-  this.traceManager.resolveTrace(tx, function (error, result) {
+  this.traceManager.resolveTrace(tx, this.astList, function (error, result) {
     console.log('trace loaded ' + result + ' ' + error)
     if (result) {
       self.statusMessage = ''
