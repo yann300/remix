@@ -106,7 +106,7 @@ module.exports = {
       return 'dynamic'
     } else if (type === 'bool' || type === 'enum') {
       return 8
-    } else if (type === 'address') {
+    } else if (type === 'address' || type === 'contract') {
       return 160
     }
     var size = type.replace(innerType, '')
@@ -237,6 +237,10 @@ module.exports = {
       nextLocation.slot = location.slot + type.slotsUsed
     } else {
       nextLocation.offset = location.offset + type.memSize
+      if (nextLocation.offset >= 64) {
+        nextLocation.offset = 0
+        nextLocation.slot = location.slot + 1
+      }
     }
     return {
       currentLocation: currentLocation,
@@ -251,7 +255,7 @@ module.exports = {
    * @return {String} return the base type
    */
   getInnerType: function (variable) {
-    var types = ['uint', 'int', 'bytes', 'string', 'address', 'struct', 'bool', 'enum']
+    var types = ['uint', 'int', 'bytes', 'string', 'address', 'struct', 'bool', 'enum', 'contract']
     for (var k in types) {
       if (this.extractType(variable.attributes.type).indexOf(types[k]) !== -1) {
         if (types[k] === 'struct') {
@@ -324,7 +328,7 @@ module.exports = {
      * @return {bool} true if type is an address
      */
   isAddress: function (type) {
-    return type.innerType === 'address'
+    return type.innerType === 'address' || type.innerType === 'contract'
   },
 
   /**
