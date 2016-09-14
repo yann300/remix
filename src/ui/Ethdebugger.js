@@ -89,7 +89,7 @@ Ethdebugger.prototype.debug = function (tx, compilationData) {
 
 Ethdebugger.prototype.render = function () {
   var view = yo`<div style=${ui.formatCss(style.font)}>
-        <h1 style=${ui.formatCss(style.container)}>VM Debugger</h1>
+        <h1 style=${ui.formatCss(style.container)}>(re)mix</h1>
         <div style='display:inline-block'>
           ${this.txBrowser.render()}
           ${this.stepManager.render()}

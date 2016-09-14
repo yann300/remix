@@ -2,13 +2,13 @@
 var BasicPanel = require('./BasicPanel')
 var yo = require('yo-yo')
 var contractsHelper = require('../solidity/contracts')
-var helper = require('../helpers/traceHelper')
 
-function SolidityStatePanel (_parent, _traceManager, _codeManager) {
+function SolidityStatePanel (_solDebugger, _parent, _traceManager, _codeManager) {
+  this.solDebugger = _solDebugger
   this.parent = _parent
   this.traceManager = _traceManager
   this.codeManager = _codeManager
-  this.basicPanel = new BasicPanel('Contract Storage')
+  this.basicPanel = new BasicPanel('Contract Storage', null, null, true)
   this.init()
   this.disabled = false
   this.astList
@@ -27,6 +27,12 @@ SolidityStatePanel.prototype.setCompilationResult = function (astList, compiledC
 
 SolidityStatePanel.prototype.init = function () {
   var self = this
+  this.parent.register('traceUnloaded', this, function () {
+    self.cache.clear()
+    self.basicPanel.data = ''
+    self.basicPanel.update()
+  })
+
   this.parent.register('indexChanged', this, function (index) {
     if (self.disabled) return
     if (index < 0) return
@@ -53,34 +59,21 @@ SolidityStatePanel.prototype.init = function () {
 }
 
 SolidityStatePanel.prototype.formatSolState = function (address, code, storage) {
-  var ctrName = this.cache.contractNameByAddress[address]
-  if (!ctrName) {
-    for (var k in this.compiledContracts) {
-      var isCreation = helper.isContractCreation(address)
-      var byteProp = isCreation ? 'bytecode' : 'runtimeBytecode'
-      if ('0x' + this.compiledContracts[k][byteProp] === code.bytes) {
-        ctrName = k
-        break
-      }
-    }
-  }
-
+  var ctrName = this.solDebugger.contractNameByAddress(address, code)
   if (ctrName) {
-    this.cache.contractNameByAddress[address] = ctrName
     var storageLocation = this.cache.storageLocationByContract[ctrName]
     if (!storageLocation) {
       storageLocation = contractsHelper.getStorageLocationOf(ctrName, this.astList)
       this.cache.storageLocationByContract[ctrName] = storageLocation
     }
     var stateVar = contractsHelper.decodeState(storageLocation, storage)
-    return JSON.stringify(stateVar, null, ' ')
+    return stateVar
   } else {
     return 'cannot found contract for address ' + address
   }
 }
 
 function Cache () {
-  this.contractNameByAddress = {}
   this.storageLocationByContract = {}
   this.clear = function () {
     this.storageLocationByContract = {}

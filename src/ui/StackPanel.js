@@ -6,7 +6,7 @@ var yo = require('yo-yo')
 function StackPanel (_parent, _traceManager) {
   this.parent = _parent
   this.traceManager = _traceManager
-  this.basicPanel = new BasicPanel('Stack')
+  this.basicPanel = new BasicPanel('Stack', null, null, true)
   this.init()
 }
 
@@ -33,10 +33,9 @@ StackPanel.prototype.init = function () {
 }
 
 StackPanel.prototype.format = function (stack) {
-  var ret = ''
+  var ret = []
   for (var key in stack) {
-    var hex = ui.normalizeHex(stack[key])
-    ret += hex + '\n'
+    ret.push(ui.normalizeHex(stack[key]))
   }
   return ret
 }

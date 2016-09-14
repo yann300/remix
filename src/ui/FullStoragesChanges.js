@@ -8,7 +8,7 @@ function FullStoragesChanges (_parent, _traceManager) {
   this.addresses = []
   this.view
   this.traceLength
-  this.basicPanel = new BasicPanel('Full Storages Changes', '1205px', '100px')
+  this.basicPanel = new BasicPanel('Full Storages Changes', '1205px', '100px', true)
   this.init()
 }
 
@@ -58,8 +58,8 @@ FullStoragesChanges.prototype.init = function () {
         self.traceManager.getStorageAt(index, null, function (error, result) {
           if (!error) {
             storageJSON[self.addresses[k]] = result
-            self.basicPanel.data = JSON.stringify(storageJSON, null, '\t')
-            yo.update(self.view, self.render())
+            self.basicPanel.data = storageJSON
+            self.basicPanel.update()
             self.show()
           }
         }, self.addresses[k])

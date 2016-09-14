@@ -6,13 +6,15 @@ var variableUtil = require('../solidity/variable')
 var contractsHelper = require('../solidity/contracts')
 var yo = require('yo-yo')
 var ui = require('../helpers/ui')
+var helper = require('../helpers/traceHelper')
 
 function SolidityDebugger (_parent, _traceManager, _codeManager, _sourceLocationTracker) {
-  this.solidityStatePanel = new SolidityStatePanel(_parent, _traceManager, _codeManager)
-  this.solidityLocals = new SolidityLocals(_parent, _traceManager, _codeManager, _sourceLocationTracker)
+  this.solidityStatePanel = new SolidityStatePanel(this, _parent, _traceManager, _codeManager)
+  this.solidityLocals = new SolidityLocals(this, _parent, _traceManager, _codeManager, _sourceLocationTracker)
   this.compiledContracts
   this.astList
   this.view
+  this.cache = new Cache()
   var self = this
   _parent.register('newTraceLoaded', this, function () {
     self.view.style.display = 'block'
@@ -39,8 +41,10 @@ function SolidityDebugger (_parent, _traceManager, _codeManager, _sourceLocation
                 console.log(error)
               } else {
                 var nodeDef = contractsHelper.getVariableDeclarationFromSourceLocation(rawLocation, self.astList)
-                if (nodeDef && nodeDef.node && nodeDef.node.name === 'VariableDeclaration' && step.op.indexOf('PUSH') !== -1) {
-                  self.addLocal(nodeDef, step)
+                if (nodeDef && nodeDef.node &&
+                nodeDef.node.name === 'VariableDeclaration' &&
+                step.op.indexOf('PUSH') !== -1) {
+                  self.addLocal(nodeDef, step, address, code)
                 }
               }
             })
@@ -51,14 +55,27 @@ function SolidityDebugger (_parent, _traceManager, _codeManager, _sourceLocation
   })
 }
 
-SolidityDebugger.prototype.addLocal = function (nodeDef, step) {
+SolidityDebugger.prototype.addLocal = function (nodeDef, step, address, code) {
   if (!this.solidityLocals.locals[nodeDef.parent.id]) {
     this.solidityLocals.locals[nodeDef.parent.id] = {}
   }
+  if (this.solidityLocals.locals[nodeDef.parent.id][nodeDef.node.id]) {
+    return
+  }
+  var ctrName = this.contractNameByAddress(address, code)
+  var stateDefinition = contractsHelper.getStateDefinition(this.astList, ctrName)
+  var type = variableUtil.getLocalsType(nodeDef.node, stateDefinition)
+  var location = 'stack'
+  if (type.isArray || type.isStruct) {
+    location = 'storage'
+  }
+  if (nodeDef.node.attributes.type.indexOf('memory') !== -1) {
+    location = 'memory'
+  }
   this.solidityLocals.locals[nodeDef.parent.id][nodeDef.node.id] = {
     name: nodeDef.node.attributes.name,
-    type: variableUtil.getBasicType(nodeDef.node),
-    memoryType: 'stack',
+    type: type,
+    memoryType: location,
     position: step.stack.length
   }
 }
@@ -91,6 +108,28 @@ SolidityDebugger.prototype.render = function () {
     this.view = view
   }
   return view
+}
+
+SolidityDebugger.prototype.contractNameByAddress = function (address, code) {
+  var ctrName = this.cache.contractNameByAddress[address]
+  if (!ctrName) {
+    for (var k in this.compiledContracts) {
+      var isCreation = helper.isContractCreation(address)
+      var byteProp = isCreation ? 'bytecode' : 'runtimeBytecode'
+      if ('0x' + this.compiledContracts[k][byteProp] === code.bytecode) {
+        this.cache.contractNameByAddress[address] = k
+        break
+      }
+    }
+  }
+  return this.cache.contractNameByAddress[address]
+}
+
+function Cache () {
+  this.contractNameByAddress = {}
+  this.clear = function () {
+    this.contractNameByAddress = {}
+  }
 }
 
 module.exports = SolidityDebugger

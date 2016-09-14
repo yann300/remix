@@ -5,7 +5,7 @@ var yo = require('yo-yo')
 function StoragePanel (_parent, _traceManager, _address) {
   this.parent = _parent
   this.traceManager = _traceManager
-  this.basicPanel = new BasicPanel('Storage Changes')
+  this.basicPanel = new BasicPanel('Storage Changes', null, null, true)
   this.address = _address
   this.init()
   this.disabled = false
@@ -35,9 +35,9 @@ StoragePanel.prototype.init = function () {
 }
 
 StoragePanel.prototype.formatStorage = function (storage) {
-  var ret = ''
+  var ret = {}
   for (var key in storage) {
-    ret += key + '  ' + storage[key] + '\n'
+    ret[key] = storage[key]
   }
   return ret
 }

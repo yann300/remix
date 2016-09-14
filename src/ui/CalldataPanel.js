@@ -5,7 +5,7 @@ var yo = require('yo-yo')
 function CalldataPanel (_parent, _traceManager) {
   this.parent = _parent
   this.traceManager = _traceManager
-  this.basicPanel = new BasicPanel('Call Data')
+  this.basicPanel = new BasicPanel('Call Data', false, false, true)
   this.init()
 }
 
@@ -32,9 +32,9 @@ CalldataPanel.prototype.init = function () {
 }
 
 CalldataPanel.prototype.format = function (calldata) {
-  var ret = ''
+  var ret = []
   for (var key in calldata) {
-    ret += calldata[key] + '\n'
+    ret.push(calldata[key])
   }
   return ret
 }

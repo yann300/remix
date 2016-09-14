@@ -103,6 +103,10 @@ SourceMappingDecoder.prototype.convertOffsetToLineColumn = function (sourceLocat
   }
 }
 
+SourceMappingDecoder.prototype.isAfter = function (location1, location2) {
+  return parseInt(location1.split(':')[0]) >= parseInt(location2.split(':')[0])
+}
+
 function convertFromCharPosition (pos, lineBreakPositions) {
   var line = util.findLowerBound(pos, lineBreakPositions)
   if (lineBreakPositions[line] !== pos) {

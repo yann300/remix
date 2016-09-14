@@ -1,7 +1,7 @@
 'use strict'
 module.exports = {
   formatMemory: function (mem, width) {
-    var ret = ''
+    var ret = {}
     if (!mem) {
       return ret
     }
@@ -13,7 +13,10 @@ module.exports = {
     for (var k = 0; k < mem.length; k += (width * 2)) {
       var memory = mem.substr(k, width * 2)
       var content = this.tryConvertAsciiFormat(memory)
-      ret += '0x' + (k / 2).toString(16) + '\t\t' + content.raw + '\t' + content.ascii + '\n'
+      ret['0x' + k.toString(16)] = {
+        'raw': content.raw,
+        'string': content.ascii
+      }
     }
     return ret
   },

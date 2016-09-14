@@ -20,6 +20,7 @@
     "browserify": "^13.0.1",
     "ethereumjs-util": "^4.5.0",
     "http-server": "^0.9.0",
+    "json-markup": "^1.0.0",
     "nightwatch": "^0.9.5",
     "standard": "^7.0.1",
     "standard-reporter": "^1.0.5",

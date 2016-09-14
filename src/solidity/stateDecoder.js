@@ -14,7 +14,7 @@ module.exports = {
    * @return {Array} return the decoded array
    */
   decodeArray: function (type, storageContent, location) {
-    return this.decodeArrayItems(type, storageContent, 0, location)
+    return this.decodeArrayItems(type, storageContent, 0, location).values
   },
 
   /**
@@ -28,7 +28,8 @@ module.exports = {
   decodeArrayItems: function (type, storageContent, depth, location) {
     var ret = []
     var size = type.dim[depth]
-    if (size === 'dynamic') {
+    var isDynamic = size === 'dynamic'
+    if (isDynamic) {
       size = storageContent[formatHexKey(location.slot.toString(16))]
       size = parseInt(size)
       var pointer = getDynamicPointer(location)
@@ -37,9 +38,22 @@ module.exports = {
     }
     if (type.dim.length - 1 > depth) {
       depth++
+      var arrayLocation = {
+        offset: location.offset,
+        slot: location.slot
+      }
       for (var k = 0; k < size; k++) {
-        ret.push(this.decodeArrayItems(type, storageContent, depth, location))
-        location = moveNextArray(location)
+        var decodedItems = this.decodeArrayItems(type, storageContent, depth, arrayLocation)
+        ret.push(decodedItems.values)
+        if (decodedItems.isDynamic) {
+          var absolutePos = k + 1
+          arrayLocation = {
+            offset: 0,
+            slot: add(location.slot, absolutePos)
+          }
+        } else {
+          arrayLocation = decodedItems.location
+        }
       }
     } else {
       for (var i = 0; i < size; i++) {
@@ -47,7 +61,11 @@ module.exports = {
         location = moveNextItemInArray(type, location)
       }
     }
-    return ret
+    return {
+      values: ret,
+      location: location,
+      isDynamic: isDynamic
+    }
   },
 
   /**
@@ -96,7 +114,7 @@ module.exports = {
   decodeBool: function (type, storageContent, location) {
     var value = getValue(type, storageContent, location)
     value = extractValue(value, type, location)
-    return value !== '0x00'
+    return decoder.decodeBool(value, type)
   },
 
   /**
@@ -109,12 +127,8 @@ module.exports = {
    */
   decodeEnum: function (type, storageContent, location) {
     var value = getValue(type, storageContent, location)
-    value = extractValue(value, type, location)
-    value = parseInt(value)
-    if (type.enum) {
-      return type.enum[value].attributes.name
-    }
-    return ''
+    value = extractValue(value, type, location)    
+    return decoder.decodeEnum(value, type)
   },
 
   /**
@@ -165,6 +179,9 @@ module.exports = {
       var currentSlot = storageContent[key]
       key = new BN(key.replace('0x', ''), 16)
       for (var k = 0; k < slots; k++) {
+        if (!currentSlot) {
+          break
+        }
         ret += currentSlot.replace('0x', '')
         key = key.add(new BN(1))
         currentSlot = storageContent['0x' + key.toString(16)]
@@ -187,14 +204,7 @@ module.exports = {
    */
   decodeString: function (type, storageContent, location) {
     var value = this.decodeBytes(type, storageContent, location)
-    value = value.replace('0x', '')
-    var ret = ''
-    for (var k = 0; k < value.length; k += 2) {
-      var raw = value.substr(k, 2)
-      var str = String.fromCharCode(parseInt(raw, 16))
-      ret += str
-    }
-    return ret
+    return decoder.decodeString(value, type)
   },
 
   /**
@@ -296,13 +306,6 @@ function toBN (value) {
   return value
 }
 
-function moveNextArray (location) {
-  return {
-    offset: 0,
-    slot: location.slot + 1
-  }
-}
-
 function moveNextItemInArray (type, location) {
   if (type.size === 'dynamic' || location.offset + type.memSize >= 64) {
     location.offset = 0
@@ -315,5 +318,3 @@ function moveNextItemInArray (type, location) {
   }
   return location
 }
-
-

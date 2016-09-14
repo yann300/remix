@@ -1,7 +1,6 @@
 'use strict'
 var BN = require('ethereumjs-util').BN
 var utileth = require('ethereumjs-util')
-var varUtil = require('./variable')
 
 module.exports = {
   decodeInt: function (value, type) {
@@ -15,6 +14,30 @@ module.exports = {
         return bigNumber.toString(10)
       }
     }
+  },
+
+  decodeEnum: function (value, type) {
+    value = parseInt(value)
+    if (type.enum) {
+      return type.enum[value].attributes.name
+    } else {
+      return value
+    }
+  },
+
+  decodeBool: function (value, type) {
+    return value !== '0x00'
+  },
+
+  decodeString: function (value, type) {
+    value = value.replace('0x', '')
+    var ret = ''
+    for (var k = 0; k < value.length; k += 2) {
+      var raw = value.substr(k, 2)
+      var str = String.fromCharCode(parseInt(raw, 16))
+      ret += str
+    }
+    return ret
   }
 }
 

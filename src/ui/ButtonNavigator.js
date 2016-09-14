@@ -46,7 +46,7 @@ ButtonNavigator.prototype.render = function () {
 ButtonNavigator.prototype.stepChanged = function (step) {
   this.intoBackDisabled = step <= 0
   this.overBackDisabled = step <= 0
-  if (!this.traceManager) {
+  if (!this.traceManager && this.traceManager.trace) {
     this.intoForwardDisabled = true
     this.overForwardDisabled = true
     this.nextCallDisabled = true
